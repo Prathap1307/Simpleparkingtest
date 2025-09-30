@@ -86,8 +86,8 @@ const HelpCenter = () => {
       ),
       title: "Call Us",
       description: "Speak directly with our support team",
-      action: "Call +44 7444277110",
-      actionLink: "tel:+447444277110",
+      action: "Call +44 7386 469113",
+      actionLink: "tel:+447386469113",
       bg: "from-blue-600 to-indigo-600"
     },
     {

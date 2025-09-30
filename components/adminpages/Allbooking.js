@@ -803,6 +803,7 @@ const filteredData = useMemo(() => {
       const res = await fetch("/api/Todaysbooking");
       if (!res.ok) throw new Error("Failed to fetch bookings");
       const data = await res.json();
+      console.log("data",data)
       setBookingData(data);
     } catch (err) {
       console.error("Error fetching booking data:", err);
