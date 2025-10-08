@@ -10,6 +10,7 @@ import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-
 import { motion, AnimatePresence } from "framer-motion";
 import { processCustomerData } from "@/utils/customerUtils";
 import { apply_coupon, apply_offer } from "@/utils/Couponsandoffers";
+import { formatDate, formatTime } from "@/utils/formatting";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -19,41 +20,6 @@ const countries = [
   { code: "+91", label: "India" },
   { code: "+61", label: "Australia" },
 ];
-
-const formatDate = (dateString) => {
-  if (!dateString) return "N/A";
-  
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "N/A";
-    
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${day}/${month}/${year}`;
-  } catch (error) {
-    console.error("Error formatting date:", error);
-    return "N/A";
-  }
-};
-
-const formatTime = (dateString) => {
-  if (!dateString) return "N/A";
-  
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return "N/A";
-    
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    
-    return `${hours}:${minutes}`;
-  } catch (error) {
-    console.error("Error formatting time:", error);
-    return "N/A";
-  }
-};
 
 const CheckoutForm = ({ 
   formData, 
@@ -258,8 +224,10 @@ const handleSubmit = async (e) => {
         totalSavings: bookingData.TotalSavings
       });
 
+      console.log(sendBookingEmail)
+
       // 4. Redirect to success page
-      router.push(`/payment/success?bookingId=${bookingResponse.id}`);
+      router.push(`/payment/success?bookingId=${bookingResponse.OrderId}`);
     } else {
       // Payment is processing (not immediately successful)
       const bookingResponse = await createBooking({

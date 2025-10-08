@@ -54,49 +54,43 @@ export default function Parkingsearchcmp({
     const formErrors = {};
     const now = new Date();
 
-    // Create combined datetime objects for validation
-    const dropOffDateTime = dropOffDate && dropOffTime ? new Date(
-      dropOffDate.getFullYear(),
-      dropOffDate.getMonth(),
-      dropOffDate.getDate(),
-      dropOffTime.getHours(),
-      dropOffTime.getMinutes()
-    ) : null;
-
-    const pickupDateTime = pickupDate && pickupTime ? new Date(
-      pickupDate.getFullYear(),
-      pickupDate.getMonth(),
-      pickupDate.getDate(),
-      pickupTime.getHours(),
-      pickupTime.getMinutes()
-    ) : null;
-
     if (!selectedAirport) formErrors.airport = 'Please select an airport';
     if (!dropOffDate || !dropOffTime) formErrors.dropOff = 'Drop-off date and time required';
     if (!pickupDate || !pickupTime) formErrors.pickup = 'Pick-up date and time required';
     
-    // Validate using combined datetime objects
-    if (dropOffDateTime && pickupDateTime) {
-      if (!isAirportActive && dropOffDateTime < nextActivationDate) {
+    // Simple validation without creating new Date objects
+    if (dropOffDate && pickupDate && dropOffTime && pickupTime) {
+      if (!isAirportActive && dropOffDate < nextActivationDate) {
         formErrors.dropOff = `Drop-off must be after ${nextActivationDate.toLocaleString()}`;
       }
       
-      if (!isAirportActive && pickupDateTime < nextActivationDate) {
+      if (!isAirportActive && pickupDate < nextActivationDate) {
         formErrors.pickup = `Pick-up must be after ${nextActivationDate.toLocaleString()}`;
       }
       
-      if (pickupDateTime <= now) {
+      if (pickupDate <= now) {
         formErrors.pickup = 'Pick-up must be in the future';
       }
+      
+      // Compare dates directly
+      const dropOffDateTime = new Date(dropOffDate.getTime());
+      dropOffDateTime.setHours(dropOffTime.getHours(), dropOffTime.getMinutes());
+      
+      const pickupDateTime = new Date(pickupDate.getTime());
+      pickupDateTime.setHours(pickupTime.getHours(), pickupTime.getMinutes());
       
       if (pickupDateTime < dropOffDateTime) {
         formErrors.pickupBeforeDropOff = 'Pick-up cannot be before Drop-off';
       }
     }
 
+    // Store dates directly without any formatting or manipulation
     const Datetimeinfo = {
       dropOffDate: dropOffDate, 
-      dropOffTime: dropOffTime, 
+      dropOffTime: dropOffTime,
+      pickupDate: pickupDate,
+      pickupTime: pickupTime,
+      selectedAirport: selectedAirport,
       airports: airports
     } 
 
@@ -199,7 +193,8 @@ export default function Parkingsearchcmp({
                 showTimeSelectOnly
                 timeIntervals={15}
                 timeCaption="Time"
-                dateFormat="h:mm aa"
+                dateFormat="HH:mm" // 24-hour format
+                timeFormat="HH:mm" 
                 className="w-full px-4 py-3 bg-gray-50 text-black border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholderText="Select time"
                 minTime={minTime}
@@ -247,7 +242,8 @@ export default function Parkingsearchcmp({
                 timeCaption="Time"
                 className="w-full px-4 py-3 bg-gray-50 border text-black border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 placeholderText="Select time"
-                dateFormat="h:mm aa"
+                dateFormat="HH:mm" // 24-hour format
+                timeFormat="HH:mm" 
                 minTime={minTime}
                 maxTime={maxTime}
                 inputMode="none"
