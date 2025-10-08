@@ -2,36 +2,27 @@ import axios from 'axios';
 // NOTE: Removed the unused imports (formatDate, formatTime) from '@/utils/formatting'
 // as the time zone-aware logic is now handled internally.
 
-// --- Time Zone Configuration ---
-// Assuming current scope is only UK airports.
+// --- Time Zone Configuration for Booking Date Only ---
 const TARGET_TIME_ZONE = 'Europe/London'; 
 
-// --- Time Zone Formatting Function ---
-const formatLocalTime = (dateStr, timeStr) => {
-    if (!dateStr || !timeStr) return { date: 'N/A', time: 'N/A' };
+// Function to format the single 'bookingDate' field (less prone to error)
+const formatBookingDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
     
-    // 1. Create a Date object by combining date and time strings.
-    // We append a time to ensure correct object creation.
-    const dateTimeObject = new Date(`${dateStr}T${timeStr}:00`);
+    // Create Date object for the single date field
+    const dateObj = new Date(dateStr);
 
-    if (isNaN(dateTimeObject.getTime())) {
-        console.error("Invalid date or time passed to formatter:", { dateStr, timeStr });
-        return { date: 'N/A', time: 'N/A' };
+    if (isNaN(dateObj.getTime())) {
+        console.error("Invalid booking date passed:", dateStr);
+        return 'N/A';
     }
 
-    const locale = 'en-GB';
-    
-    // Options to display time correctly for the user (reversing UTC shift)
-    const dateOptions = { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TARGET_TIME_ZONE };
-    const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: TARGET_TIME_ZONE };
-
-    return {
-        date: dateTimeObject.toLocaleDateString(locale, dateOptions),
-        time: dateTimeObject.toLocaleTimeString(locale, timeOptions),
-    };
+    const options = { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TARGET_TIME_ZONE };
+    return dateObj.toLocaleDateString('en-GB', options);
 };
 
-// Validate required environment variables at startup
+
+// Validate required environment variables at startup (omitted for brevity)
 const validateEnv = () => {
     const requiredEnv = {
         EMAILAPI: process.env.EMAILAPI,
@@ -44,19 +35,11 @@ const validateEnv = () => {
     }
 };
 
-// Validate booking details structure
+// Validate booking details structure (omitted for brevity)
 const validateBookingDetails = (details) => {
     const requiredFields = [
-        'customerName',
-        'customerEmail',
-        'orderId',
-        'bookingDate',
-        'fromDate',
-        'toDate',
-        'airport',
-        'carNumber',
-        'parkingSlot',
-        'paidAmount'
+        'customerName', 'customerEmail', 'orderId', 'bookingDate', 'fromDate',
+        'toDate', 'airport', 'carNumber', 'parkingSlot', 'paidAmount'
     ];
 
     const missingFields = requiredFields.filter(field => !details[field]);
@@ -65,40 +48,36 @@ const validateBookingDetails = (details) => {
     }
 };
 
+// --- CORE FIX: Using original strings for Date/Time fields ---
 export async function POST(request) {
     try {
-        // Validate environment variables first
         validateEnv();
-
         const bookingDetails = await request.json();
-        // console.log("Received booking details:", bookingDetails); // Removed verbose logging
-
-        // Validate booking details structure
         validateBookingDetails(bookingDetails);
 
-        // --- TIME ZONE CORRECTED FORMATTING ---
-        const departure = formatLocalTime(bookingDetails.fromDate, bookingDetails.fromTime || '00:00');
-        const arrival = formatLocalTime(bookingDetails.toDate, bookingDetails.toTime || '00:00');
+        // --- TIME ZONE SAFE STRING PASS-THROUGH ---
         
-        // Note: For the 'Date of Booking' which is likely a fixed day, 
-        // we format it simply without a time component.
-        const bookingDateObj = new Date(bookingDetails.bookingDate);
-        const bookingDateOptions = { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TARGET_TIME_ZONE };
-        const bookingDateFormatted = bookingDateObj.toLocaleDateString('en-GB', bookingDateOptions);
-        
+        // 1. Format the less critical booking date
+        const bookingDateFormatted = formatBookingDate(bookingDetails.bookingDate);
+
+        // 2. Safely use the original, client-provided date and time strings.
+        // We ensure a fallback to prevent 'N/A' if the fields were missing, 
+        // while avoiding date object manipulation.
         const formattedData = {
             bookingDate: bookingDateFormatted,
-            fromDate: departure.date,
-            toDate: arrival.date,
-            fromTime: departure.time, 
-            toTime: arrival.time,
+            // FIX: Pass the raw strings which were correct in your initial successful test payload
+            fromDate: bookingDetails.fromDate,
+            toDate: bookingDetails.toDate,
+            // FIX: Convert raw time string (HH:MM) to 12-hour format manually and safely
+            fromTime: convert24to12Hour(bookingDetails.fromTime || '00:00'),
+            toTime: convert24to12Hour(bookingDetails.toTime || '00:00'),
         };
 
-        // Prepare email parameters with fallbacks for optional fields
+        // Prepare email parameters (omitted for brevity)
         const emailParams = {
             customerName: bookingDetails.customerName,
             orderId: bookingDetails.orderId,
-            ...formattedData, // <-- Uses time zone corrected data
+            ...formattedData, // <-- Uses safe, un-shifted strings
             airport: bookingDetails.airport,
             carNumber: bookingDetails.carNumber,
             parkingSlot: bookingDetails.parkingSlot,
@@ -117,58 +96,21 @@ export async function POST(request) {
         };
 
         const emailPayload = {
-            sender: {
-                email: process.env.SENDERMAIL,
-                name: 'Simple Parking'
-            },
-            to: [{
-                email: bookingDetails.customerEmail,
-                name: bookingDetails.customerName
-            },
-            {
-                email: 'kprathap1307@gmail.com',
-                name: 'Prathap'
-            }
-        ],
+            sender: { email: process.env.SENDERMAIL, name: 'Simple Parking' },
+            to: [{ email: bookingDetails.customerEmail, name: bookingDetails.customerName }, { email: 'kprathap1307@gmail.com', name: 'Prathap' }],
             templateId: Number(process.env.EMAILTEMP),
             params: emailParams,
-            headers: {
-                'X-Mailin-custom': 'booking-confirmation'
-            }
+            headers: { 'X-Mailin-custom': 'booking-confirmation' }
         };
 
-        // console.log("Sending to Brevo API:", JSON.stringify(emailPayload, null, 2)); // Removed verbose logging
-
         const response = await axios.post(
-            'https://api.brevo.com/v3/smtp/email',
-            emailPayload,
-            {
-                headers: {
-                    'api-key': process.env.EMAILAPI,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                timeout: 5000 // 5-second timeout
-            }
+            'https://api.brevo.com/v3/smtp/email', emailPayload,
+            { headers: { 'api-key': process.env.EMAILAPI, 'Content-Type': 'application/json', 'Accept': 'application/json' }, timeout: 5000 }
         );
 
-        // console.log("Brevo API response:", response.data); // Removed verbose logging
-
-        return new Response(JSON.stringify({ 
-            success: true,
-            messageId: response.data.messageId 
-        }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ success: true, messageId: response.data.messageId }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
     } catch (error) {
-        // console.error("Full error details:", { // Removed verbose logging
-        //     message: error.message,
-        //     stack: error.stack,
-        //     response: error.response?.data
-        // });
-
         const statusCode = error.response?.status || 500;
         const errorMessage = error.response?.data?.message || error.message;
 
@@ -177,9 +119,26 @@ export async function POST(request) {
             error: 'Failed to send booking confirmation',
             details: errorMessage,
             ...(error.response?.data && { apiResponse: error.response.data })
-        }), {
-            status: statusCode,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        }), { status: statusCode, headers: { 'Content-Type': 'application/json' } });
     }
+}
+
+
+// --- Helper Function for Time Conversion (Needed since we bypass external formatting) ---
+function convert24to12Hour(time24) {
+    if (!time24 || typeof time24 !== 'string') return 'N/A';
+    
+    // Handle HH:MM:SS or HH:MM
+    const parts = time24.split(':');
+    if (parts.length < 2) return time24;
+    
+    let [hours, minutes] = parts.map(p => parseInt(p));
+    
+    if (isNaN(hours) || isNaN(minutes)) return time24;
+
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    hours = ((hours % 12) || 12); // Convert '0' and '12' to '12'
+    minutes = String(minutes).padStart(2, '0');
+
+    return `${hours}:${minutes} ${suffix}`;
 }
