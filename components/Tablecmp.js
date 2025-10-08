@@ -253,11 +253,11 @@ const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentP
   doc.text('VEHICLE', margin, yPos);
   doc.setFont(undefined, 'normal');
   yPos += 7;
-  doc.text(`Car Reg: ${item.CarNumber || "N/A"}`, margin, yPos);
+  doc.text(`Car Reg: ${item.CarNumber || ""}`, margin, yPos);
   yPos += 7;
-  doc.text(`Car model: ${item.CarModel || "N/A"}`, margin, yPos);
+  doc.text(`Car model: ${item.CarModel || ""}`, margin, yPos);
   yPos += 7;
-  doc.text(`Colour: ${item.CarColor || "N/A"}`, margin, yPos);
+  doc.text(`Colour: ${item.CarColor || ""}`, margin, yPos);
   
   // Horizontal line
   yPos += 5;
@@ -352,7 +352,7 @@ const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentP
   doc.text('DATE OF ARRIVAL', secondSectionX, yPos);
   yPos += 6;
   doc.setFontSize(12);
-  doc.text(formatDate(item.FromDate), secondSectionX, yPos);
+  doc.text(formatDate(item.ToDate), secondSectionX, yPos);
   
   // Horizontal line
   yPos += 8;
@@ -364,7 +364,7 @@ const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentP
   doc.text('TIME OF ARRIVAL', secondSectionX, yPos);
   yPos += 6;
   doc.setFontSize(12);
-  doc.text(formatTime(item.FromTime), secondSectionX, yPos);
+  doc.text(formatTime(item.ToTime), secondSectionX, yPos);
   
   // Horizontal line
   yPos += 8;
@@ -377,6 +377,43 @@ const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentP
   yPos += 6;
   doc.setFontSize(12);
   doc.text('2', secondSectionX, yPos);
+
+    // Horizontal line
+  yPos += 8;
+  doc.line(thirdSectionX, yPos, pageWidth - margin, yPos);
+  
+  // Booking Summary
+  yPos += 12;
+  doc.setFont(undefined, 'bold');
+  doc.text('BOOKING SUMMARY', thirdSectionX, yPos);
+  doc.setFont(undefined, 'normal');
+  
+  const summaryMargin1 = thirdSectionX + 5;
+  
+  // Header
+  yPos += 6;
+  doc.setFontSize(8);
+  doc.text('Details', summaryMargin1, yPos);
+  
+  // Content rows
+  yPos += 2;
+  doc.setFontSize(8);
+  
+  const summaryData1 = [
+    {label: 'Booking ref:', value: item.OrderId || ""},
+    {label: 'Car reg:', value: item.CarNumber || ""},
+    {label: 'Model:', value: item.CarModel || ""},
+    {label: 'Colour:', value: item.CarColor || ""},
+    {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
+    {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
+    {label: 'Paid:', value: `$${item.PaidAmount || "0"}`}
+  ];
+  
+  summaryData1.forEach(row => {
+    yPos += 5;
+    doc.text(row.label, summaryMargin1, yPos);
+    doc.text(row.value, summaryMargin1 + 25, yPos);
+  });
 
   // ==========================
   // THIRD SECTION (RIGHT 1/3)
@@ -428,10 +465,10 @@ const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentP
   doc.setFontSize(8);
   
   const summaryData = [
-    {label: 'Booking ref:', value: item.OrderId || "N/A"},
-    {label: 'Car reg:', value: item.CarNumber || "N/A"},
-    {label: 'Model:', value: item.CarModel || "N/A"},
-    {label: 'Colour:', value: item.CarColor || "N/A"},
+    {label: 'Booking ref:', value: item.OrderId || ""},
+    {label: 'Car reg:', value: item.CarNumber || ""},
+    {label: 'Model:', value: item.CarModel || ""},
+    {label: 'Colour:', value: item.CarColor || ""},
     {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
     {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
     {label: 'Paid:', value: `$${item.PaidAmount || "0"}`}
