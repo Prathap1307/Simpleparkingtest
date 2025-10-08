@@ -13,6 +13,8 @@ import {
 } from "@heroui/react";
 import jsPDF from 'jspdf';
 
+const logoImage = '/logo-nobg.png';
+
 export const EyeIcon = (props) => {
   return (
     <svg
@@ -179,413 +181,439 @@ export const PrintIcon = (props) => {
 
 const DynamicTable = ({ columns, data, statusOptions, onEdit, onDelete, currentPage, totalPages }) => {
 
-  const generatePDF = (item) => {
-  // A4 landscape dimensions in mm (297mm x 210mm)
-  const pageWidth = 297;
-  const pageHeight = 210;
-  const sectionWidth = pageWidth / 3;
-  
-  // Convert 10px to mm (approx 3.53mm at 96 DPI)
-  const marginPx = 10;
-  const margin = 15 + (marginPx * 25.4 / 96); // Convert px to mm and add to existing margin
-  
-  const logoHeight = 40;
-  const logoWidth = 80;
-  
-  const doc = new jsPDF('l', 'mm', 'a4');
-  doc.setFont('helvetica');
+    const generatePDF = async (item) => {
+    try {
+      const CarModel = prompt("Get vehicle information from: https://www.gov.uk/get-vehicle-information-from-dvla\n Enter Car model:");
+      const CarColour = prompt("Enter Colour:");
 
-  // IMPORTANT: Replace with actual logo path or base64 image
-  const logoData = "/logo-nobg.png";
+      // A4 landscape dimensions in mm (297mm x 210mm)
+      const pageWidth = 297;
+      const pageHeight = 210;
+      const sectionWidth = pageWidth / 3;
+      
+      const marginPx = 10;
+      const margin = 15 + (marginPx * 25.4 / 96);
+      
+      const logoHeight = 40;
+      const logoWidth = 80;
+      
+      const doc = new jsPDF('l', 'mm', 'a4');
+      doc.setFont('helvetica');
 
-  // Function to add watermarked logo to all three columns
-  const addWatermarkedLogos = () => {
-    // Save current graphics state
-    doc.saveGraphicsState();
-    
-    // Set transparency (30% opacity)
-    doc.setGState(new doc.GState({opacity: 0.2}));
-    
-    // Add logo to all three columns (centered in each column)
-    const centerY = pageHeight / 2 - logoHeight / 2;
-    
-    // Left column
-    doc.addImage(logoData, "JPEG", sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
-    
-    // Middle column
-    doc.addImage(logoData, "JPEG", sectionWidth + sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
-    
-    // Right column
-    doc.addImage(logoData, "JPEG", sectionWidth * 2 + sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
-    
-    // Restore graphics state
-    doc.restoreGraphicsState();
+      // Function to load logo as base64
+      const loadLogo = () => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              const dataURL = canvas.toDataURL('image/png');
+              resolve(dataURL);
+            } catch (error) {
+              reject(error);
+            }
+          };
+          img.onerror = () => {
+            console.warn('Logo failed to load, continuing without logo');
+            resolve(null); // Continue without logo
+          };
+          
+          // Use absolute URL to ensure the image loads correctly
+          const baseUrl = window.location.origin;
+          img.src = baseUrl + logoImage;
+        });
+      };
+
+      // Try to load logo, but continue even if it fails
+      let logoData = null;
+      try {
+        logoData = await loadLogo();
+      } catch (error) {
+        console.warn('Could not load logo:', error);
+      }
+
+      // Function to add watermarked logos
+      const addWatermarkedLogos = () => {
+        if (!logoData) return; // Skip if no logo
+        
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({opacity: 1}));
+        
+        const centerY = pageHeight / 2 - logoHeight / 2;
+        
+        // Add logo to all three columns
+        doc.addImage(logoData, "PNG", sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
+        doc.addImage(logoData, "PNG", sectionWidth + sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
+        doc.addImage(logoData, "PNG", sectionWidth * 2 + sectionWidth/2 - logoWidth/2, centerY, logoWidth, logoHeight);
+        
+        doc.restoreGraphicsState();
+      };
+
+      // ========================
+      // FIRST PAGE CONTENT
+      // ========================
+      
+      // Add watermarked logos to first page
+      addWatermarkedLogos();
+
+      // FIRST SECTION (LEFT 1/3)
+      let yPos = margin + 5;
+      
+      // Customer section
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('CUSTOMER', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 7;
+      doc.text(`Name: ${item.ParkingName?.replace(/\(.*\)/, '').trim() || "N/A"}`, margin, yPos);
+      yPos += 7;
+      doc.text(`Mobile: ${item.CustomerPhone || "N/A"}`, margin, yPos);
+      yPos += 7;
+      doc.text(`Booking ref: ${item.OrderId || "N/A"}`, margin, yPos);
+      
+      // Horizontal line
+      yPos += 5;
+      doc.setLineWidth(0.2);
+      doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
+      
+      // Vehicle section
+      yPos += 10;
+      doc.setFont(undefined, 'bold');
+      doc.text('VEHICLE', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 7;
+      doc.text(`Car Reg: ${item.CarNumber || ""}`, margin, yPos);
+      yPos += 7;
+      doc.text(`Car model: ${CarModel || ""}`, margin, yPos);
+      yPos += 7;
+      doc.text(`Colour: ${CarColour || ""}`, margin, yPos);
+      
+      // Horizontal line
+      yPos += 5;
+      doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
+      
+      // Flight details
+      yPos += 10;
+      doc.setFont(undefined, 'bold');
+      doc.text('FLIGHT DETAILS', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 7;
+      
+      // Flight header
+      const flightMargin = margin + 4;
+      doc.setFontSize(9);
+      doc.text('Date', flightMargin, yPos);
+      doc.text('Time', flightMargin + 25, yPos);
+      doc.text('Terminal', flightMargin + 40, yPos);
+      
+      // Departure details
+      yPos += 5;
+      doc.setFontSize(10);
+      doc.text('Departure', margin, yPos);
+      yPos += 5;
+      doc.text(formatDate(item.FromDate), flightMargin, yPos);
+      doc.text(formatTime(item.FromTime), flightMargin + 25, yPos);
+      doc.text('T2', flightMargin + 40, yPos);
+      
+      // Return details
+      yPos += 7;
+      doc.text('Return', margin, yPos);
+      yPos += 5;
+      doc.text(formatDate(item.ToDate), flightMargin, yPos);
+      doc.text(formatTime(item.ToTime), flightMargin + 25, yPos);
+      doc.text('T2', flightMargin + 40, yPos);
+
+      yPos += 5;
+      doc.line(margin, yPos, margin + sectionWidth - margin, yPos)
+
+      // Declaration
+      const declarationText = 'DECLARATION - By signing this document I agree that i have read and i am willing to be bound by the terms and conditions of Lion Parking and agree to the damage noted on my car. I further agree that the damage noted is not an accurate reflection of the condition of the car, due to time constraints/location.';
+      
+      doc.setFontSize(6);
+      const maxWidth = sectionWidth - margin * 2;
+      const declarationLines = doc.splitTextToSize(declarationText, maxWidth);
+      
+      yPos += 4;
+      doc.text(declarationLines, margin, yPos);
+      yPos += declarationLines.length * 2.5;
+
+      yPos += 6;
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text('#signature - 1', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 4;
+
+      const sign1 = 'Signature #01 - We confirm that no items/valuables have been left in the vehicle';
+      doc.setFontSize(6);
+      const declarationLines1 = doc.splitTextToSize(sign1, maxWidth);
+      doc.text(declarationLines1, margin, yPos);
+      yPos += declarationLines1.length * 2.5;
+
+      yPos += 4;
+      doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
+
+      yPos += 6;
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'bold');
+      doc.text('#signature - 2', margin, yPos);
+      doc.setFont(undefined, 'normal');
+      yPos += 4;
+
+      const sign2 = 'Signature #02 - Customer confirms vehicle condition and contents';
+      doc.setFontSize(6);
+      const declarationLines2 = doc.splitTextToSize(sign2, maxWidth);
+      doc.text(declarationLines2, margin, yPos);
+
+      // SECOND SECTION (MIDDLE 1/3)
+      const secondSectionX = sectionWidth + margin/2;
+      yPos = margin + 5;
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('ARRIVAL INFORMATION', secondSectionX, yPos);
+      
+      // Date of Arrival
+      yPos += 12;
+      doc.setFontSize(10);
+      doc.text('DATE OF ARRIVAL', secondSectionX, yPos);
+      yPos += 6;
+      doc.setFontSize(12);
+      doc.text(formatDate(item.ToDate), secondSectionX, yPos);
+      
+      // Horizontal line
+      yPos += 8;
+      doc.line(secondSectionX, yPos, sectionWidth * 2 - margin/2, yPos);
+      
+      // Time of Arrival
+      yPos += 12;
+      doc.setFontSize(10);
+      doc.text('TIME OF ARRIVAL', secondSectionX, yPos);
+      yPos += 6;
+      doc.setFontSize(12);
+      doc.text(formatTime(item.ToTime), secondSectionX, yPos);
+      
+      // Horizontal line
+      yPos += 8;
+      doc.line(secondSectionX, yPos, sectionWidth * 2 - margin/2, yPos);
+      
+      // Terminal
+      yPos += 12;
+      doc.setFontSize(10);
+      doc.text('TERMINAL', secondSectionX, yPos);
+      yPos += 6;
+      doc.setFontSize(12);
+      doc.text('2', secondSectionX, yPos);
+
+      // Horizontal line
+      yPos += 8;
+      doc.line(secondSectionX, yPos, sectionWidth * 2 - margin/2, yPos);
+      
+      // Booking Summary
+      yPos += 12;
+      doc.setFont(undefined, 'bold');
+      doc.text('BOOKING SUMMARY', secondSectionX, yPos);
+      doc.setFont(undefined, 'normal');
+      
+      const summaryMargin1 = secondSectionX + 5;
+      
+      // Header
+      yPos += 6;
+      doc.setFontSize(8);
+      doc.text('Details', summaryMargin1, yPos);
+      
+      // Content rows
+      yPos += 2;
+      doc.setFontSize(8);
+      
+      const summaryData1 = [
+        {label: 'Booking ref:', value: item.OrderId || ""},
+        {label: 'Car reg:', value: item.CarNumber || ""},
+        {label: 'Model:', value: CarModel || ""},
+        {label: 'Colour:', value: CarColour || ""},
+        {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
+        {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
+      ];
+      
+      summaryData1.forEach(row => {
+        yPos += 5;
+        doc.text(row.label, summaryMargin1, yPos);
+        doc.text(row.value, summaryMargin1 + 25, yPos);
+      });
+
+      // THIRD SECTION (RIGHT 1/3)
+      const thirdSectionX = sectionWidth * 2 + margin/2;
+      yPos = margin + 5;
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'bold');
+      doc.text('CONTACT INFORMATION', thirdSectionX, yPos);
+      doc.setFont(undefined, 'normal');
+      
+      yPos += 6;
+      doc.text('After luggage collection call:', thirdSectionX, yPos);
+      yPos += 6;
+      doc.setFont(undefined, 'bold');
+      doc.text('+44 7361 111683', thirdSectionX, yPos);
+      
+      yPos += 8;
+      doc.setFont(undefined, 'normal');
+      doc.text('Customer relations:', thirdSectionX, yPos);
+      yPos += 6;
+      doc.text('support@simpleparking.uk', thirdSectionX, yPos);
+      
+      yPos += 6;
+      doc.text('Amendments/cancellations:', thirdSectionX, yPos);
+      yPos += 6;
+      doc.text('9AM-5PM Mon-Fri', thirdSectionX, yPos);
+      
+      // Horizontal line
+      yPos += 8;
+      doc.line(thirdSectionX, yPos, pageWidth - margin, yPos);
+      
+      // Booking Summary
+      yPos += 12;
+      doc.setFont(undefined, 'bold');
+      doc.text('BOOKING SUMMARY', thirdSectionX, yPos);
+      doc.setFont(undefined, 'normal');
+      
+      const summaryMargin = thirdSectionX + 5;
+      
+      // Header
+      yPos += 6;
+      doc.setFontSize(8);
+      doc.text('Details', summaryMargin, yPos);
+      
+      // Content rows
+      yPos += 2;
+      doc.setFontSize(8);
+      
+      const summaryData = [
+        {label: 'Booking ref:', value: item.OrderId || ""},
+        {label: 'Car reg:', value: item.CarNumber || ""},
+        {label: 'Model:', value: CarModel || ""},
+        {label: 'Colour:', value: CarColour || ""},
+        {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
+        {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
+        {label: 'Paid:', value: `$${item.PaidAmount || "0"}`}
+      ];
+      
+      summaryData.forEach(row => {
+        yPos += 5;
+        doc.text(row.label, summaryMargin, yPos);
+        doc.text(row.value, summaryMargin + 25, yPos);
+      });
+
+      // =====================
+      // SECOND PAGE
+      // =====================
+      doc.addPage('l', 'a4');
+      
+      // Add watermarked logos to second page
+      addWatermarkedLogos();
+
+      // FIRST COLUMN - TERMS AND CONDITIONS
+      yPos = margin + 5;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('TERMS AND CONDITIONS', margin, yPos);
+
+      doc.setFontSize(4);
+      doc.setFont(undefined, 'normal');
+
+      const terms = [
+        "By using our services, you confirm acceptance of these Terms & Conditions available at: www.simpleparking.uk",
+        "1.BOOKINGS AND SERVICE  :  Bookings through our website or Consolidators are deemed to be made when final confirmation of the booking has been sent via email. All terms and conditions are deemed to have been accepted at the point confirmation is made. Whilst every effort is made to ensure that collections and deliveries of the vehicle are made at the requested times. We do not accept any responsibility for delays of its service, caused because of circumstances beyond our control, such as traffic congestion, delayed flights, road accidents, security alerts, severe weather conditions, luggage delays and immigration delays. This list is not exhausted. Where a third-party service provider is used, they will have their own terms and conditions. If you require a copy of these, please ask, however we will do our best to make you aware of anything you need to know. Once your booking is complete, our role will be as an intermediary between you and the service provider, booking details will be provided with the supplier and we will send you a booking reference number by email on behalf of the supplier",
+        "2.PAYMENT  : Increased duration of the stay will be debited from the clients account and payment collected prior to the return of the vehicle. Any extended days will be charged are £35 for the first day, £15 per day thereafter. Full payment of booked service is due prior to the commencement of the service. If your return time passes midnight, early returns or if you return on a flight different to the one originally specified, there will be a charge of £30 payable to the driver in cash. If any height or size limit for vehicles will be an additional cost of £40.00 per day. Airport access fee not included in the price. Where a Meet and Greet service is booked, we kindly ask that you call us once you have cleared Baggage and Customs. This allows us to process your car in a timely manner and make sure it is ready and waiting for you. Please note that if you call prior to this, or there is an unreasonable delay from your call to you arriving at the collection point, you may be charged for any additional parking charges made by the airport authority.",
+        "3.CANCELLATIONS AND CURTAILMENT : Flexible products may be cancelled up to 24 hours prior to the date for which the service has been booked and a full refund, less £20.00 administration cost will be made. No refunds will be given for any cancellations, or no use of our service made within 24 hours of the day of travel. Any customer wishing to curtail the length of stay for a service once that service has commenced will be liable to pay the fee for the whole of the service booked. Any alterations made within 24 hours of departure and during the duration of stay will incur a charge of £20.00 for each amendment made. All amendments must be via e-mail and will only be acknowledged once a confirmation e-mail is received. Cancellations or amendments cannot be accepted if you book a supersaver, saver, or nonflexible parking product",
+        "4.LIABILITIES AND OTHER TERMS : Where a third-party service provider is used, the company acts only as a booking agent for the service provider, the company is liable to the customer only for losses directly arising from any negligence of the company in processing a booking. Any claims by the customer in respect of the delivery of the product must be made against the service provider and subject to its terms and conditions. Where we are the service provider, our insurance covers our legal liabilities. Vehicles and moveable items which are left unattended are left at the owner's risk whilst the vehicle is in our possession. No claim for damage can be made unless that damage was brought to the attention of our representative upon collection of your vehicle on your return and written notification is given to you at the time.",
+      ];
+
+      yPos += 5;
+
+      terms.forEach(term => {
+        const splitText = doc.splitTextToSize(term, sectionWidth - margin * 2);
+        
+        splitText.forEach((line) => {
+          doc.text(line, margin, yPos);
+          yPos += 3.5;
+        });
+        
+        yPos += 2;
+      });
+
+      // SECOND COLUMN - ADDITIONAL INFORMATION
+      const secondColX = sectionWidth + margin;
+      let yPos2 = margin + 5;
+
+      doc.setFontSize(4);
+      doc.setFont(undefined, 'normal');
+      yPos2 += 5;
+
+      const parkingInfo = [
+        " We accept no liability for mechanical, structural and electrical failure of any part of your vehicle including windscreens, glass chips, clutches, tyres and alloy wheels. This list is not exhaustive. We accept no liability for any loss or damage whatsoever caused unless proved to be caused by the negligence of our employees. Your vehicle must beTAXED, MOT and comply with the Road Traffic Act 1988. This is deemed by us to be the case for the whole duration while the vehicle is in our possession. We accept no liability for any faulty keys, alarm fobs, house or other keys left on the key ring. In the event of vehicles not starting, we reserve the right to charge for our time. We therefore advise that only the car key should be given. In the event that the car acquires a puncture whilst in our possession, (including slow punctures) we reserve the right to charge either to inflate the tyre or for the changing of the tyre. We do not accept liability for punctures whilst in our custody. In the event that the vehicle does not start due to a flat battery, we reserve the right to charge for our time in attempting to start the vehicle. Please note that we cannot be held responsible for any consequences that may result as a direct result of us having to jump-start your vehicle. We advise that the customers either leave a spare key with us or keep a spare key for their vehicle on their person. During busy periods your car may be stored in any one of our secondary compounds, (within a 20-mile radius of our main car park). Please note that security levels may vary. If your vehicle needs to be repaired as a result of our negligence, it must be carried out by our own approved organisation. It will be your responsibility to deliver and collect the car from the garage at your own cost. We cannot authorise or agree for any works to be carried out by dealerships that have not been approved, even in the event of the vehicle forgoing its warranty. The company reserves the right to undertake repairs to your vehicle on your behalf in a manner which restores it to the condition in which it arrived at the car park. Our drivers do not consent to being filmed. Therefore, in some cases dash cams may be disconnected.",
+        "5.EXCLUSION AND LIMITS OF OUR RESPONSIBILITY : Vehicles parked by the customer personally at a Car park/Hotel do so entirely at their own risk. Loss or damage should be covered by your own insurance. No vehicles will be covered for Theft/Fire/Flood/Malicious damage or any other intervening act of nature whilst the vehicle is parked in our custody. Any indirect/direct loss as a result of damage or loss to the vehicle (such as loss of earnings/missed flights etc.). We cannot pay more than £10,000 for loss of or damage to the vehicle. We will endeavour to deliver your vehicle back to you within 45 mins depending on traffic, weather conditions. We cannot be held liable for any delayed or missed flights/car hire charges as a direct or indirect result of our service. We will not be responsible for any discolour of paintwork or dents or scratches that may become visible after a Car wash/rainfall. This is regardless of if the dents or scratches are mentioned in this document or not. We are unable to accept vehicles that are fitted with a roof luggage box that do not fall under the height restrictions within the airport car parks. In the event of a customer booking the service with a vehicle fitted with a roof luggage box the Company cannot accept liability for any damage. It is not always possible to check the internal condition of the car and therefore we may not accept responsibility for the interior condition. Unless proved otherwise, minor claims, (those below £750) may not be accepted.",
+        "6.CUSTOMER RELATIONS PROCEDURE  : If you should have any concerns or issues you wish to raise or investigate further, the following procedure needs to take effect. A written correspondence needs to be made via email / letter / to our office (all correspondence details are available on the customer copy coupon receipt). Our customer relations team shall endeavour to respond back to your query within a maximum 5 working days. Please note that all matters need to be dealt with in writing. Any incidents/issues raised whilst picking or dropping your vehicle need to be made apparent to a Lion Parking Ltd member of staff which will be reported/logged back to the Duty Manager.",
+      ];
+
+      parkingInfo.forEach(info => {
+        const splitText = doc.splitTextToSize(info, sectionWidth - margin * 2);
+        
+        splitText.forEach((line) => {
+          doc.text(line, secondColX, yPos2);
+          yPos2 += 3.5;
+        });
+        
+        yPos2 += 2;
+      });
+
+      // THIRD COLUMN - CONTACT & SUPPORT
+      const thirdColX = sectionWidth * 2 + margin;
+      let yPos3 = margin + 5;
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('CONTACT & SUPPORT', thirdColX, yPos3);
+
+      doc.setFontSize(7);
+      doc.setFont(undefined, 'normal');
+      yPos3 += 5;
+
+      const contactInfo = [
+        "Emergency Contact: +44 7361 111683",
+        "Customer Service: support@simpleparking.uk",
+        "Office Hours: 9AM-5PM Mon-Fri",
+        "For urgent assistance outside office hours, please use the emergency contact number.",
+        "If you experience any issues with your parking service or have questions about your booking, our customer service team is available to assist you during office hours.",
+        "For damage claims or incidents, please report them immediately to our staff on site and take photographs if possible for documentation.",
+        "7.CHANGING THE CONDITIONS  : These conditions will remain in force unless the change is made in writing directly with us and with our written permission."
+        
+      ];
+
+      contactInfo.forEach(info => {
+        const splitText = doc.splitTextToSize(info, sectionWidth - margin * 2);
+        
+        splitText.forEach((line) => {
+          doc.text(line, thirdColX, yPos3);
+          yPos3 += 3.5;
+        });
+        
+        yPos3 += 2;
+      });
+
+      // Save the PDF
+      doc.save(`parking_receipt_${item.OrderId || 'receipt'}.pdf`);
+
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    }
   };
-
-  // Add watermarked logos to first page
-  addWatermarkedLogos();
-
-  // ========================
-  // FIRST SECTION (LEFT 1/3)
-  // ========================
-  let yPos = margin + 5;
-  
-  // Customer section
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text('CUSTOMER', margin, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 7;
-  doc.text(`Name: ${item.ParkingName?.replace(/\(.*\)/, '').trim() || "N/A"}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Mobile: ${item.CustomerPhone || "N/A"}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Booking ref: ${item.OrderId || "N/A"}`, margin, yPos);
-  
-  // Horizontal line
-  yPos += 5;
-  doc.setLineWidth(0.2);
-  doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
-  
-  // Vehicle section
-  yPos += 10;
-  doc.setFont(undefined, 'bold');
-  doc.text('VEHICLE', margin, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 7;
-  doc.text(`Car Reg: ${item.CarNumber || ""}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Car model: ${item.CarModel || ""}`, margin, yPos);
-  yPos += 7;
-  doc.text(`Colour: ${item.CarColor || ""}`, margin, yPos);
-  
-  // Horizontal line
-  yPos += 5;
-  doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
-  
-  // Flight details
-  yPos += 10;
-  doc.setFont(undefined, 'bold');
-  doc.text('FLIGHT DETAILS', margin, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 7;
-  
-  // Flight header
-  const flightMargin = margin + 4;
-  doc.setFontSize(9);
-  doc.text('Date', flightMargin, yPos);
-  doc.text('Time', flightMargin + 25, yPos);
-  doc.text('Terminal', flightMargin + 40, yPos);
-  
-  // Departure details
-  yPos += 5;
-  doc.setFontSize(10);
-  doc.text('Departure', margin, yPos);
-  yPos += 5;
-  doc.text(formatDate(item.FromDate), flightMargin, yPos);
-  doc.text(formatTime(item.FromTime), flightMargin + 25, yPos);
-  doc.text('T2', flightMargin + 40, yPos);
-  
-  // Return details
-  yPos += 7;
-  doc.text('Return', margin, yPos);
-  yPos += 5;
-  doc.text(formatDate(item.ToDate), flightMargin, yPos);
-  doc.text(formatTime(item.ToTime), flightMargin + 25, yPos);
-  doc.text('T2', flightMargin + 40, yPos);
-
-  yPos += 5;
-  doc.line(margin, yPos, margin + sectionWidth - margin, yPos)
-
-  // Declaration
-  const declarationText = 'DECLARATION - By signing this document I agree that i have read and i am willing to be bound by the terms and conditions of Lion Parking and agree to the damage noted on my car. I further agree that the damage noted is not an accurate reflection of the condition of the car, due to time constraints/location.';
-  
-  doc.setFontSize(6);
-  const maxWidth = sectionWidth - margin * 2;
-  const declarationLines = doc.splitTextToSize(declarationText, maxWidth);
-  
-  yPos += 4;
-  doc.text(declarationLines, margin, yPos);
-  yPos += declarationLines.length * 2.5;
-
-  yPos += 6;
-  doc.setFontSize(8);
-  doc.setFont(undefined, 'bold');
-  doc.text('#signature - 1', margin, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 4;
-
-  const sign1 = 'Signature #01 - We confirm that no items/valuables have been left in the vehicle';
-  doc.setFontSize(6);
-  const declarationLines1 = doc.splitTextToSize(sign1, maxWidth);
-  doc.text(declarationLines1, margin, yPos);
-  yPos += declarationLines1.length * 2.5;
-
-  yPos += 4;
-  doc.line(margin, yPos, margin + sectionWidth - margin, yPos);
-
-  yPos += 6;
-  doc.setFontSize(8);
-  doc.setFont(undefined, 'bold');
-  doc.text('#signature - 2', margin, yPos);
-  doc.setFont(undefined, 'normal');
-  yPos += 4;
-
-  const sign2 = 'Signature #02 - Customer confirms vehicle condition and contents';
-  doc.setFontSize(6);
-  const declarationLines2 = doc.splitTextToSize(sign2, maxWidth);
-  doc.text(declarationLines2, margin, yPos);
-
-  // ===========================
-  // SECOND SECTION (MIDDLE 1/3)
-  // ===========================
-  const secondSectionX = sectionWidth + margin/2;
-  yPos = margin + 5;
-  
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text('ARRIVAL INFORMATION', secondSectionX, yPos);
-  
-  // Date of Arrival
-  yPos += 12;
-  doc.setFontSize(10);
-  doc.text('DATE OF ARRIVAL', secondSectionX, yPos);
-  yPos += 6;
-  doc.setFontSize(12);
-  doc.text(formatDate(item.ToDate), secondSectionX, yPos);
-  
-  // Horizontal line
-  yPos += 8;
-  doc.line(secondSectionX, yPos, sectionWidth * 2 - margin/2, yPos);
-  
-  // Time of Arrival
-  yPos += 12;
-  doc.setFontSize(10);
-  doc.text('TIME OF ARRIVAL', secondSectionX, yPos);
-  yPos += 6;
-  doc.setFontSize(12);
-  doc.text(formatTime(item.ToTime), secondSectionX, yPos);
-  
-  // Horizontal line
-  yPos += 8;
-  doc.line(secondSectionX, yPos, sectionWidth * 2 - margin/2, yPos);
-  
-  // Terminal
-  yPos += 12;
-  doc.setFontSize(10);
-  doc.text('TERMINAL', secondSectionX, yPos);
-  yPos += 6;
-  doc.setFontSize(12);
-  doc.text('2', secondSectionX, yPos);
-
-    // Horizontal line
-  yPos += 8;
-  doc.line(thirdSectionX, yPos, pageWidth - margin, yPos);
-  
-  // Booking Summary
-  yPos += 12;
-  doc.setFont(undefined, 'bold');
-  doc.text('BOOKING SUMMARY', thirdSectionX, yPos);
-  doc.setFont(undefined, 'normal');
-  
-  const summaryMargin1 = thirdSectionX + 5;
-  
-  // Header
-  yPos += 6;
-  doc.setFontSize(8);
-  doc.text('Details', summaryMargin1, yPos);
-  
-  // Content rows
-  yPos += 2;
-  doc.setFontSize(8);
-  
-  const summaryData1 = [
-    {label: 'Booking ref:', value: item.OrderId || ""},
-    {label: 'Car reg:', value: item.CarNumber || ""},
-    {label: 'Model:', value: item.CarModel || ""},
-    {label: 'Colour:', value: item.CarColor || ""},
-    {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
-    {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
-    {label: 'Paid:', value: `$${item.PaidAmount || "0"}`}
-  ];
-  
-  summaryData1.forEach(row => {
-    yPos += 5;
-    doc.text(row.label, summaryMargin1, yPos);
-    doc.text(row.value, summaryMargin1 + 25, yPos);
-  });
-
-  // ==========================
-  // THIRD SECTION (RIGHT 1/3)
-  // ==========================
-  const thirdSectionX = sectionWidth * 2 + margin/2;
-  yPos = margin + 5;
-  
-  doc.setFontSize(10);
-  doc.setFont(undefined, 'bold');
-  doc.text('CONTACT INFORMATION', thirdSectionX, yPos);
-  doc.setFont(undefined, 'normal');
-  
-  yPos += 6;
-  doc.text('After luggage collection call:', thirdSectionX, yPos);
-  yPos += 6;
-  doc.setFont(undefined, 'bold');
-  doc.text('+44 7361 111683', thirdSectionX, yPos);
-  
-  yPos += 8;
-  doc.setFont(undefined, 'normal');
-  doc.text('Customer relations:', thirdSectionX, yPos);
-  yPos += 6;
-  doc.text('support@simpleparking.uk', thirdSectionX, yPos);
-  
-  yPos += 6;
-  doc.text('Amendments/cancellations:', thirdSectionX, yPos);
-  yPos += 6;
-  doc.text('9AM-5PM Mon-Fri', thirdSectionX, yPos);
-  
-  // Horizontal line
-  yPos += 8;
-  doc.line(thirdSectionX, yPos, pageWidth - margin, yPos);
-  
-  // Booking Summary
-  yPos += 12;
-  doc.setFont(undefined, 'bold');
-  doc.text('BOOKING SUMMARY', thirdSectionX, yPos);
-  doc.setFont(undefined, 'normal');
-  
-  const summaryMargin = thirdSectionX + 5;
-  
-  // Header
-  yPos += 6;
-  doc.setFontSize(8);
-  doc.text('Details', summaryMargin, yPos);
-  
-  // Content rows
-  yPos += 2;
-  doc.setFontSize(8);
-  
-  const summaryData = [
-    {label: 'Booking ref:', value: item.OrderId || ""},
-    {label: 'Car reg:', value: item.CarNumber || ""},
-    {label: 'Model:', value: item.CarModel || ""},
-    {label: 'Colour:', value: item.CarColor || ""},
-    {label: 'Departure:', value: `${formatDate(item.FromDate)} ${formatTime(item.FromTime)} T2`},
-    {label: 'Return:', value: `${formatDate(item.ToDate)} ${formatTime(item.ToTime)} T2`},
-    {label: 'Paid:', value: `$${item.PaidAmount || "0"}`}
-  ];
-  
-  summaryData.forEach(row => {
-    yPos += 5;
-    doc.text(row.label, summaryMargin, yPos);
-    doc.text(row.value, summaryMargin + 25, yPos);
-  });
-
-  // =====================
-  // SECOND PAGE
-  // =====================
-  doc.addPage('l', 'a4');
-  
-  // Add watermarked logos to second page
-  addWatermarkedLogos();
-
-  // ===========================
-  // FIRST COLUMN - TERMS AND CONDITIONS
-  // ===========================
-  yPos = margin + 25;
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text('TERMS AND CONDITIONS', margin, yPos);
-
-  doc.setFontSize(4);
-  doc.setFont(undefined, 'normal');
-
-  const terms = [
-    "By using our services, you confirm acceptance of these Terms & Conditions available at: www.simpleparking.uk",
-    "1.BOOKINGS AND SERVICE  :  Bookings through our website or Consolidators are deemed to be made when final confirmation of the booking has been sent via email. All terms and conditions are deemed to have been accepted at the point confirmation is made. Whilst every effort is made to ensure that collections and deliveries of the vehicle are made at the requested times. We do not accept any responsibility for delays of its service, caused because of circumstances beyond our control, such as traffic congestion, delayed flights, road accidents, security alerts, severe weather conditions, luggage delays and immigration delays. This list is not exhausted. Where a third-party service provider is used, they will have their own terms and conditions. If you require a copy of these, please ask, however we will do our best to make you aware of anything you need to know. Once your booking is complete, our role will be as an intermediary between you and the service provider, booking details will be provided with the supplier and we will send you a booking reference number by email on behalf of the supplier",
-    "2.PAYMENT  : Increased duration of the stay will be debited from the clients account and payment collected prior to the return of the vehicle. Any extended days will be charged are £35 for the first day, £15 per day thereafter. Full payment of booked service is due prior to the commencement of the service. If your return time passes midnight, early returns or if you return on a flight different to the one originally specified, there will be a charge of £30 payable to the driver in cash. If any height or size limit for vehicles will be an additional cost of £40.00 per day. Airport access fee not included in the price. Where a Meet and Greet service is booked, we kindly ask that you call us once you have cleared Baggage and Customs. This allows us to process your car in a timely manner and make sure it is ready and waiting for you. Please note that if you call prior to this, or there is an unreasonable delay from your call to you arriving at the collection point, you may be charged for any additional parking charges made by the airport authority.",
-    "3.CANCELLATIONS AND CURTAILMENT : Flexible products may be cancelled up to 24 hours prior to the date for which the service has been booked and a full refund, less £20.00 administration cost will be made. No refunds will be given for any cancellations, or no use of our service made within 24 hours of the day of travel. Any customer wishing to curtail the length of stay for a service once that service has commenced will be liable to pay the fee for the whole of the service booked. Any alterations made within 24 hours of departure and during the duration of stay will incur a charge of £20.00 for each amendment made. All amendments must be via e-mail and will only be acknowledged once a confirmation e-mail is received. Cancellations or amendments cannot be accepted if you book a supersaver, saver, or nonflexible parking product",
-    "4.LIABILITIES AND OTHER TERMS : Where a third-party service provider is used, the company acts only as a booking agent for the service provider, the company is liable to the customer only for losses directly arising from any negligence of the company in processing a booking. Any claims by the customer in respect of the delivery of the product must be made against the service provider and subject to its terms and conditions. Where we are the service provider, our insurance covers our legal liabilities. Vehicles and moveable items which are left unattended are left at the owner's risk whilst the vehicle is in our possession. No claim for damage can be made unless that damage was brought to the attention of our representative upon collection of your vehicle on your return and written notification is given to you at the time.",
-  ];
-
-  yPos += 5;
-
-  terms.forEach(term => {
-    const splitText = doc.splitTextToSize(term, sectionWidth - margin * 2);
-    
-    splitText.forEach((line) => {
-      doc.text(line, margin, yPos);
-      yPos += 3.5;
-    });
-    
-    yPos += 2;
-  });
-
-  // ===========================
-  // SECOND COLUMN - ADDITIONAL INFORMATION
-  // ===========================
-  const secondColX = sectionWidth + margin;
-  let yPos2 = margin + 25;
-
-  doc.setFontSize(4);
-  doc.setFont(undefined, 'normal');
-  yPos2 += 5;
-
-  const parkingInfo = [
-    " We accept no liability for mechanical, structural and electrical failure of any part of your vehicle including windscreens, glass chips, clutches, tyres and alloy wheels. This list is not exhaustive. We accept no liability for any loss or damage whatsoever caused unless proved to be caused by the negligence of our employees. Your vehicle must beTAXED, MOT and comply with the Road Traffic Act 1988. This is deemed by us to be the case for the whole duration while the vehicle is in our possession. We accept no liability for any faulty keys, alarm fobs, house or other keys left on the key ring. In the event of vehicles not starting, we reserve the right to charge for our time. We therefore advise that only the car key should be given. In the event that the car acquires a puncture whilst in our possession, (including slow punctures) we reserve the right to charge either to inflate the tyre or for the changing of the tyre. We do not accept liability for punctures whilst in our custody. In the event that the vehicle does not start due to a flat battery, we reserve the right to charge for our time in attempting to start the vehicle. Please note that we cannot be held responsible for any consequences that may result as a direct result of us having to jump-start your vehicle. We advise that the customers either leave a spare key with us or keep a spare key for their vehicle on their person. During busy periods your car may be stored in any one of our secondary compounds, (within a 20-mile radius of our main car park). Please note that security levels may vary. If your vehicle needs to be repaired as a result of our negligence, it must be carried out by our own approved organisation. It will be your responsibility to deliver and collect the car from the garage at your own cost. We cannot authorise or agree for any works to be carried out by dealerships that have not been approved, even in the event of the vehicle forgoing its warranty. The company reserves the right to undertake repairs to your vehicle on your behalf in a manner which restores it to the condition in which it arrived at the car park. Our drivers do not consent to being filmed. Therefore, in some cases dash cams may be disconnected.",
-    "5.EXCLUSION AND LIMITS OF OUR RESPONSIBILITY : Vehicles parked by the customer personally at a Car park/Hotel do so entirely at their own risk. Loss or damage should be covered by your own insurance. No vehicles will be covered for Theft/Fire/Flood/Malicious damage or any other intervening act of nature whilst the vehicle is parked in our custody. Any indirect/direct loss as a result of damage or loss to the vehicle (such as loss of earnings/missed flights etc.). We cannot pay more than £10,000 for loss of or damage to the vehicle. We will endeavour to deliver your vehicle back to you within 45 mins depending on traffic, weather conditions. We cannot be held liable for any delayed or missed flights/car hire charges as a direct or indirect result of our service. We will not be responsible for any discolour of paintwork or dents or scratches that may become visible after a Car wash/rainfall. This is regardless of if the dents or scratches are mentioned in this document or not. We are unable to accept vehicles that are fitted with a roof luggage box that do not fall under the height restrictions within the airport car parks. In the event of a customer booking the service with a vehicle fitted with a roof luggage box the Company cannot accept liability for any damage. It is not always possible to check the internal condition of the car and therefore we may not accept responsibility for the interior condition. Unless proved otherwise, minor claims, (those below £750) may not be accepted.",
-    "6.CUSTOMER RELATIONS PROCEDURE  : If you should have any concerns or issues you wish to raise or investigate further, the following procedure needs to take effect. A written correspondence needs to be made via email / letter / to our office (all correspondence details are available on the customer copy coupon receipt). Our customer relations team shall endeavour to respond back to your query within a maximum 5 working days. Please note that all matters need to be dealt with in writing. Any incidents/issues raised whilst picking or dropping your vehicle need to be made apparent to a Lion Parking Ltd member of staff which will be reported/logged back to the Duty Manager.",
-  ];
-
-  parkingInfo.forEach(info => {
-    const splitText = doc.splitTextToSize(info, sectionWidth - margin * 2);
-    
-    splitText.forEach((line) => {
-      doc.text(line, secondColX, yPos2);
-      yPos2 += 3.5;
-    });
-    
-    yPos2 += 2;
-  });
-
-  // ===========================
-  // THIRD COLUMN - CONTACT & SUPPORT
-  // ===========================
-  const thirdColX = sectionWidth * 2 + margin;
-  let yPos3 = margin + 25;
-  
-  doc.setFontSize(12);
-  doc.setFont(undefined, 'bold');
-  doc.text('CONTACT & SUPPORT', thirdColX, yPos3);
-
-  doc.setFontSize(7);
-  doc.setFont(undefined, 'normal');
-  yPos3 += 5;
-
-  const contactInfo = [
-    "Emergency Contact: +44 7361 111683",
-    "Customer Service: support@simpleparking.uk",
-    "Office Hours: 9AM-5PM Mon-Fri",
-    "For urgent assistance outside office hours, please use the emergency contact number.",
-    "If you experience any issues with your parking service or have questions about your booking, our customer service team is available to assist you during office hours.",
-    "For damage claims or incidents, please report them immediately to our staff on site and take photographs if possible for documentation.",
-    "7.CHANGING THE CONDITIONS  : These conditions will remain in force unless the change is made in writing directly with us and with our written permission."
-    
-  ];
-
-  contactInfo.forEach(info => {
-    const splitText = doc.splitTextToSize(info, sectionWidth - margin * 2);
-    
-    splitText.forEach((line) => {
-      doc.text(line, thirdColX, yPos3);
-      yPos3 += 3.5;
-    });
-    
-    yPos3 += 2;
-  });
-
-  // Save the PDF
-  doc.save(`parking_receipt_${item.OrderId || 'receipt'}.pdf`);
-};
 
 // Helper functions
 function formatDate(dateString) {
