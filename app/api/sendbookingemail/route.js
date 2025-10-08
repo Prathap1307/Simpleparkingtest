@@ -1,25 +1,60 @@
 import axios from 'axios';
-// NOTE: Removed the unused imports (formatDate, formatTime) from '@/utils/formatting'
-// as the time zone-aware logic is now handled internally.
 
-// --- Time Zone Configuration for Booking Date Only ---
+// --- Time Zone Configuration ---
 const TARGET_TIME_ZONE = 'Europe/London'; 
 
-// Function to format the single 'bookingDate' field (less prone to error)
-const formatBookingDate = (dateStr) => {
-    if (!dateStr) return 'N/A';
+// --- Helper Functions ---
+
+// 1. Cleans the date string to ensure only YYYY-MM-DD is passed to the email template.
+function cleanDateString(dateValue) {
+    if (!dateValue || typeof dateValue !== 'string') return 'N/A';
     
-    // Create Date object for the single date field
-    const dateObj = new Date(dateStr);
+    // Check if it's an ISO string (contains 'T') or just a date string.
+    const isoIndex = dateValue.indexOf('T');
+    
+    if (isoIndex > -1) {
+        // If it's an ISO string, strip off the time component and return only the date part.
+        return dateValue.substring(0, isoIndex);
+    }
+    
+    // Otherwise, return the string as is (e.g., "2025-10-23")
+    return dateValue;
+}
+
+// 2. Formats the single 'bookingDate' field (less critical)
+const formatBookingDate = (dateStr) => {
+    // We pass a cleaned date string to the Date constructor to avoid local time shifts
+    const cleanedDate = cleanDateString(dateStr); 
+    if (cleanedDate === 'N/A') return 'N/A';
+    
+    const dateObj = new Date(cleanedDate);
 
     if (isNaN(dateObj.getTime())) {
-        console.error("Invalid booking date passed:", dateStr);
-        return 'N/A';
+        return cleanedDate; // Fallback to the cleaned string if formatting fails
     }
 
     const options = { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: TARGET_TIME_ZONE };
     return dateObj.toLocaleDateString('en-GB', options);
 };
+
+// 3. Helper Function for Time Conversion (Converts HH:MM to 12-hour format)
+function convert24to12Hour(time24) {
+    if (!time24 || typeof time24 !== 'string') return 'N/A';
+    
+    // Handle HH:MM:SS or HH:MM
+    const parts = time24.split(':');
+    if (parts.length < 2) return time24;
+    
+    let [hours, minutes] = parts.map(p => parseInt(p));
+    
+    if (isNaN(hours) || isNaN(minutes)) return time24;
+
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    hours = ((hours % 12) || 12); // Convert '0' and '12' to '12'
+    minutes = String(minutes).padStart(2, '0');
+
+    return `${hours}:${minutes} ${suffix}`;
+}
 
 
 // Validate required environment variables at startup (omitted for brevity)
@@ -54,21 +89,21 @@ export async function POST(request) {
         validateEnv();
         const bookingDetails = await request.json();
         validateBookingDetails(bookingDetails);
+        console.log("1",bookingDetails )
 
         // --- TIME ZONE SAFE STRING PASS-THROUGH ---
         
         // 1. Format the less critical booking date
         const bookingDateFormatted = formatBookingDate(bookingDetails.bookingDate);
 
-        // 2. Safely use the original, client-provided date and time strings.
-        // We ensure a fallback to prevent 'N/A' if the fields were missing, 
-        // while avoiding date object manipulation.
+        // 2. Extract and clean date strings, and format time strings.
         const formattedData = {
             bookingDate: bookingDateFormatted,
-            // FIX: Pass the raw strings which were correct in your initial successful test payload
-            fromDate: bookingDetails.fromDate,
-            toDate: bookingDetails.toDate,
-            // FIX: Convert raw time string (HH:MM) to 12-hour format manually and safely
+            // FIX: Use cleanDateString() to strip any ISO time component passed from the client
+            fromDate: cleanDateString(bookingDetails.fromDate),
+            toDate: cleanDateString(bookingDetails.toDate),
+            
+            // FIX: Convert raw time string (HH:MM) to 12-hour format manually
             fromTime: convert24to12Hour(bookingDetails.fromTime || '00:00'),
             toTime: convert24to12Hour(bookingDetails.toTime || '00:00'),
         };
@@ -77,7 +112,7 @@ export async function POST(request) {
         const emailParams = {
             customerName: bookingDetails.customerName,
             orderId: bookingDetails.orderId,
-            ...formattedData, // <-- Uses safe, un-shifted strings
+            ...formattedData,
             airport: bookingDetails.airport,
             carNumber: bookingDetails.carNumber,
             parkingSlot: bookingDetails.parkingSlot,
@@ -94,6 +129,8 @@ export async function POST(request) {
             originalPrice: bookingDetails.originalPrice,
             totalSavings: bookingDetails.totalSavings,
         };
+
+        console.log('ep',emailParams)
 
         const emailPayload = {
             sender: { email: process.env.SENDERMAIL, name: 'Simple Parking' },
@@ -121,24 +158,4 @@ export async function POST(request) {
             ...(error.response?.data && { apiResponse: error.response.data })
         }), { status: statusCode, headers: { 'Content-Type': 'application/json' } });
     }
-}
-
-
-// --- Helper Function for Time Conversion (Needed since we bypass external formatting) ---
-function convert24to12Hour(time24) {
-    if (!time24 || typeof time24 !== 'string') return 'N/A';
-    
-    // Handle HH:MM:SS or HH:MM
-    const parts = time24.split(':');
-    if (parts.length < 2) return time24;
-    
-    let [hours, minutes] = parts.map(p => parseInt(p));
-    
-    if (isNaN(hours) || isNaN(minutes)) return time24;
-
-    const suffix = hours >= 12 ? 'PM' : 'AM';
-    hours = ((hours % 12) || 12); // Convert '0' and '12' to '12'
-    minutes = String(minutes).padStart(2, '0');
-
-    return `${hours}:${minutes} ${suffix}`;
 }
