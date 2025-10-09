@@ -33,54 +33,12 @@ export async function POST(request) {
     try {
         validateEnv();
         const bookingDetails = await request.json();
-        validateBookingDetails(bookingDetails);
-
-        // --- TIME ZONE SAFE STRING PASS-THROUGH ---
-        
-        // 1. Format the less critical booking date
-        const bookingDateFormatted = bookingDetails.bookingDate;
-
-        // 2. Extract and clean date strings, and format time strings.
-        const formattedData = {
-            bookingDate: bookingDateFormatted,
-            // FIX: Use cleanDateString() to strip any ISO time component passed from the client
-            fromDate: bookingDetails.fromDate,
-            toDate: bookingDetails.toDate,
-            
-            // FIX: Convert raw time string (HH:MM) to 12-hour format manually
-            fromTime: bookingDetails.fromTime ,
-            toTime: bookingDetails.toTime,
-        };
-
-        // Prepare email parameters (omitted for brevity)
-        const emailParams = {
-            customerName: bookingDetails.customerName,
-            orderId: bookingDetails.orderId,
-            ...formattedData,
-            airport: bookingDetails.airport,
-            carNumber: bookingDetails.carNumber,
-            parkingSlot: bookingDetails.parkingSlot,
-            paidAmount: bookingDetails.paidAmount,
-            paymentMethod: bookingDetails.paymentMethod || 'Not specified',
-            Departure_Terminal: bookingDetails.departureTerminal || 'Not specified',
-            Departure_Flight: bookingDetails.departureFlightNumber || 'Not specified',
-            Arrival_Terminal: bookingDetails.returnTerminal || 'Not specified',
-            Arrival_Flight: bookingDetails.returnFlightNumber || 'Not specified',
-            couponApplied: bookingDetails.couponApplied,
-            offerApplied: bookingDetails.offerApplied,
-            couponDetails: bookingDetails.couponDetails,
-            offerDetails: bookingDetails.offerDetails,
-            originalPrice: bookingDetails.originalPrice,
-            totalSavings: bookingDetails.totalSavings,
-        };
-
-        console.log('ep',emailParams)
 
         const emailPayload = {
             sender: { email: process.env.SENDERMAIL, name: 'Simple Parking' },
             to: [{ email: bookingDetails.customerEmail, name: bookingDetails.customerName }, { email: 'kprathap1307@gmail.com', name: 'Prathap' }],
             templateId: Number(process.env.EMAILTEMP),
-            params: emailParams,
+            params: bookingDetails,
             headers: { 'X-Mailin-custom': 'booking-confirmation' }
         };
 

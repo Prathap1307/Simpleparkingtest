@@ -196,16 +196,21 @@ const handleSubmit = async (e) => {
         OrderId: bookingData.OrderId
       });
 
+      const formatbookingdate = formatDate(bookingData.bookingDate)
+      const formatfromdate = formatDate(bookingData.FromDate)
+      const formatfromtime =formatTime(bookingData.FromTime)
+      const formattodate =  formatDate(bookingData.ToDate)
+      const formattotime =  formatTime(bookingData.ToTime)
       // 3. Send confirmation email
       await sendBookingEmail({
         customerName: bookingData.ParkingName,
         customerEmail: bookingData.CustomerEmail,
         orderId: bookingData.OrderId,
-        bookingDate: bookingData.bookingDate,
-        fromDate: bookingData.FromDate,
-        fromTime: bookingData.FromTime,
-        toDate: bookingData.ToDate,
-        toTime: bookingData.ToTime,
+        bookingDate: String(formatbookingdate),
+        fromDate: String(formatfromdate),
+        fromTime: String(formatfromtime) ,
+        toDate: String(formattodate),
+        toTime:  String(formattotime),
         airport: bookingData.Airport,
         carNumber: bookingData.CarNumber,
         parkingSlot: bookingData.Location,
@@ -223,8 +228,6 @@ const handleSubmit = async (e) => {
         originalPrice: bookingData.OriginalPrice,
         totalSavings: bookingData.TotalSavings
       });
-
-      console.log(sendBookingEmail)
 
       // 4. Redirect to success page
       router.push(`/payment/success?bookingId=${bookingResponse.OrderId}`);
