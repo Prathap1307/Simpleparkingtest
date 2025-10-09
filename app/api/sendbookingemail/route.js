@@ -32,13 +32,40 @@ const validateBookingDetails = (details) => {
 export async function POST(request) {
     try {
         validateEnv();
-        const bookingDetails = await request.json();
+        const bookingDetails = await request.json()
+
+
+        // Prepare email parameters (omitted for brevity)
+        const emailParams = {
+            customerName: bookingDetails.customerName,
+            orderId: bookingDetails.orderId,
+            bookingDate: bookingDetails.bookingDate,
+            fromDate: bookingDetails.fromDate,
+            toDate: bookingDetails.toDate,
+            fromTime: bookingDetails.fromTime ,
+            toTime: bookingDetails.toTime,
+            airport: bookingDetails.airport,
+            carNumber: bookingDetails.carNumber,
+            parkingSlot: bookingDetails.parkingSlot,
+            paidAmount: bookingDetails.paidAmount,
+            paymentMethod: bookingDetails.paymentMethod || 'Not specified',
+            Departure_Terminal: bookingDetails.departureTerminal || 'Not specified',
+            Departure_Flight: bookingDetails.departureFlightNumber || 'Not specified',
+            Arrival_Terminal: bookingDetails.returnTerminal || 'Not specified',
+            Arrival_Flight: bookingDetails.returnFlightNumber || 'Not specified',
+            couponApplied: bookingDetails.couponApplied,
+            offerApplied: bookingDetails.offerApplied,
+            couponDetails: bookingDetails.couponDetails,
+            offerDetails: bookingDetails.offerDetails,
+            originalPrice: bookingDetails.originalPrice,
+            totalSavings: bookingDetails.totalSavings,
+        };
 
         const emailPayload = {
             sender: { email: process.env.SENDERMAIL, name: 'Simple Parking' },
             to: [{ email: bookingDetails.customerEmail, name: bookingDetails.customerName }, { email: 'kprathap1307@gmail.com', name: 'Prathap' }],
             templateId: Number(process.env.EMAILTEMP),
-            params: bookingDetails,
+            params: emailParams,
             headers: { 'X-Mailin-custom': 'booking-confirmation' }
         };
 
