@@ -12,7 +12,6 @@ import ParkingCard from '@/components/Cardscmp';
 export default function ParkingAvailability() {
   const params = useParams();
   const selectedAirportRaw = params?.airport;
-  console.log(selectedAirportRaw)
   const selectedAirport = decodeURIComponent(selectedAirportRaw || 'London Luton Airport');
 
   const [LocationsData, setLocationsData] = useState([]);

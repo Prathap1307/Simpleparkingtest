@@ -138,7 +138,6 @@ export default function Parkingsspace() {
 
       if (!res.ok) throw new Error('Failed to delete.<br />');
 
-      console.log(`Deleted parking space with ID: ${itemToDelete.id}`);
       await refreshTableData();
     } catch (error) {
       console.error('Error deleting parking space:<br />', error);

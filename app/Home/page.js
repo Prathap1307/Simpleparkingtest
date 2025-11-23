@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 import Navbarcmp from '@/components/Navbar';
 import Parkingsearchcmp from '@/components/parkingsearch';
 import LoadingCard from '@/components/Loading';
-import { Image } from '@heroui/react';
+import { Button, Image } from '@heroui/react';
 import Footer from '@/components/Footer';
 
 
@@ -83,198 +83,9 @@ const Homepage = () => {
     }, 1500);
   };
 
-  // Parallax Section Component
-  const ParallaxSection = ({ children, speed = 1 }) => {
-    const ref = useRef(null);
-    const { scrollYProgress } = useScroll({
-      target: ref,
-      offset: ["start start", "end start"]
-    });
 
-    const y = useTransform(scrollYProgress, [0, 1], [0, -100 * speed]);
 
-    return (
-      <div ref={ref}>
-        <motion.div style={{ y }}>{children}</motion.div>
-      </div>
-    );
-  };
 
-  // Magnetic Cursor Component
-  const MagneticCursor = () => {
-    const cursorRef = useRef(null);
-    const trailRefs = useRef([]);
-    const [position, setPosition] = useState({ x: -100, y: -100 });
-    const [hovering, setHovering] = useState(false);
-    const [clicking, setClicking] = useState(false);
-    const [trailPositions, setTrailPositions] = useState(Array(5).fill({ x: -100, y: -100 }));
-
-    useEffect(() => {
-      const moveCursor = (e) => {
-        setPosition({ x: e.clientX, y: e.clientY });
-        setTrailPositions(prev => {
-          const newPositions = [...prev];
-          newPositions.pop();
-          return [{ x: e.clientX, y: e.clientY }, ...newPositions];
-        });
-      };
-      
-      const handleMouseDown = () => setClicking(true);
-      const handleMouseUp = () => setClicking(false);
-      
-      window.addEventListener('mousemove', moveCursor);
-      window.addEventListener('mousedown', handleMouseDown);
-      window.addEventListener('mouseup', handleMouseUp);
-      
-      // Add hover detection
-      const interactiveElements = [
-        ...document.querySelectorAll('a, button, .magnetic, input, textarea, select'),
-      ];
-      
-      interactiveElements.forEach(el => {
-        el.addEventListener('mouseenter', () => setHovering(true));
-        el.addEventListener('mouseleave', () => setHovering(false));
-      });
-
-      return () => {
-        window.removeEventListener('mousemove', moveCursor);
-        window.removeEventListener('mousedown', handleMouseDown);
-        window.removeEventListener('mouseup', handleMouseUp);
-        interactiveElements.forEach(el => {
-          el.removeEventListener('mouseenter', () => setHovering(true));
-          el.removeEventListener('mouseleave', () => setHovering(false));
-        });
-      };
-    }, []);
-
-    return (
-      <>
-        <motion.div
-          ref={cursorRef}
-          className="fixed top-0 left-0 pointer-events-none z-[9999] mix-blend-difference"
-          animate={{
-            x: position.x - 10,
-            y: position.y - 10,
-            scale: clicking ? 0.7 : hovering ? 1.8 : 1,
-            opacity: hovering || clicking ? 1 : 0.8,
-          }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 800, 
-            damping: 25, 
-            mass: 0.5 
-          }}
-        >
-          <div className={`w-4 h-4 rounded-full ${
-            hovering ? 'bg-indigo-500' : clicking ? 'bg-purple-500' : 'bg-white'
-          } transition-colors shadow-lg ${hovering ? 'shadow-indigo-500/30' : ''}`} />
-        </motion.div>
-        
-        {trailPositions.map((pos, i) => (
-          <motion.div
-            key={i}
-            className="fixed top-0 left-0 pointer-events-none z-[9998] mix-blend-difference"
-            animate={{
-              x: pos.x - 8 + (Math.random() * 4 - 2),
-              y: pos.y - 8 + (Math.random() * 4 - 2),
-              scale: 1 - (i * 0.15),
-              opacity: 0.6 - (i * 0.1)
-            }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 500, 
-              damping: 30, 
-              mass: 0.3,
-              delay: i * 0.01
-            }}
-          >
-            <div className={`w-3 h-3 rounded-full ${
-              hovering ? 'bg-indigo-400/50' : clicking ? 'bg-purple-400/50' : 'bg-white/50'
-            } transition-colors`} />
-          </motion.div>
-        ))}
-      </>
-    );
-  };
-
-  // Magnetic Button Component (Reusable)
-  const MagneticButton = ({ children, onClick, className = '' }) => {
-    const ref = useRef(null);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [hovering, setHovering] = useState(false);
-
-    useEffect(() => {
-      if (!ref.current) return;
-      
-      const handleMouseMove = (e) => {
-        const rect = ref.current.getBoundingClientRect();
-        setPosition({
-          x: e.clientX - rect.left - rect.width / 2,
-          y: e.clientY - rect.top - rect.height / 2
-        });
-      };
-      
-      const handleMouseEnter = () => setHovering(true);
-      const handleMouseLeave = () => {
-        setHovering(false);
-        setPosition({ x: 0, y: 0 });
-      };
-      
-      ref.current.addEventListener('mousemove', handleMouseMove);
-      ref.current.addEventListener('mouseenter', handleMouseEnter);
-      ref.current.addEventListener('mouseleave', handleMouseLeave);
-      
-      return () => {
-        if (ref.current) {
-          ref.current.removeEventListener('mousemove', handleMouseMove);
-          ref.current.removeEventListener('mouseenter', handleMouseEnter);
-          ref.current.removeEventListener('mouseleave', handleMouseLeave);
-        }
-      };
-    }, []);
-
-    return (
-      <motion.button
-        ref={ref}
-        onClick={onClick}
-        className={`relative overflow-hidden px-6 py-3 rounded-full font-medium magnetic ${className}`}
-        whileTap={{ scale: 0.95 }}
-      >
-        <motion.span 
-          className="relative z-10 flex items-center justify-center gap-2"
-          animate={{
-            x: position.x * 0.2,
-            y: position.y * 0.2
-          }}
-          transition={{ type: 'spring', stiffness: 400, damping: 15, mass: 0.1 }}
-        >
-          {children}
-        </motion.span>
-        <motion.div 
-          className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full z-0"
-          initial={{ scale: 1 }}
-          animate={{ 
-            scale: hovering ? 1.05 : 1,
-            x: position.x * 0.4,
-            y: position.y * 0.4
-          }}
-          transition={{ type: 'spring', stiffness: 300, damping: 15, mass: 0.1 }}
-        />
-        {hovering && (
-          <motion.div 
-            className="absolute inset-0 rounded-full pointer-events-none"
-            initial={{ opacity: 0, scale: 1 }}
-            animate={{ opacity: 0.2, scale: 1.5 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            style={{
-              background: "radial-gradient(circle, rgba(124, 58, 237, 0.8) 0%, rgba(124, 58, 237, 0) 70%)"
-            }}
-          />
-        )}
-      </motion.button>
-    );
-  };
 
   const GlowingCard = ({ icon, title, description, index }) => {
     return (
@@ -301,7 +112,6 @@ const Homepage = () => {
 
   return (
     <>
-      <MagneticCursor />
 
       <div className='w-full'>
         <Navbarcmp onFindParkingClick={scrollToSearch} />
@@ -309,14 +119,13 @@ const Homepage = () => {
 
       {/* Hero Section with Parallax */}
       <div className="relative lg:overflow-hidden md:overflow-hidden h-screen" >
-        <ParallaxSection speed={0.5}>
+
           <Image
             alt="Hero"
             radius='none'
             className="w-full h-full object-cover filter brightness-75"
             src="https://images.unsplash.com/photo-1629238727881-cdc61062fba1?q=80&w=2670&auto=format&fit=crop"
           />
-        </ParallaxSection>
 
         <div id='Searchfrom' className="absolute top-0 left-0 w-full h-full flex items-center justify-center px-4 z-10">
           <div className="w-full flex flex-col md:flex-row items-center justify-center gap-6">
@@ -576,12 +385,12 @@ const Homepage = () => {
                   <div className="mt-auto">
                     <div className="flex items-end justify-between">
                       <span className="text-2xl font-bold text-white">{airport.price}</span>
-                      <MagneticButton 
+                      <Button 
                         className="bg-white text-gray-900 hover:bg-gray-100"
                         onClick={scrollToSearch}
                       >
                         View Parking
-                      </MagneticButton>
+                      </Button>
                     </div>
                     <div className="text-sm text-gray-300 mt-2">
                       Starting from {airport.price}
@@ -691,15 +500,15 @@ const Homepage = () => {
               Join thousands of travelers who trust Simple parking for their airport parking needs.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <MagneticButton 
+              <Button 
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/20"
                 onClick={scrollToSearch}
               >
                 Find Your Parking Now
-              </MagneticButton>
-              <MagneticButton className="bg-transparent border border-white text-white hover:bg-white/10">
+              </Button>
+              <Button className="bg-transparent border border-white text-white hover:bg-white/10">
                 Learn More
-              </MagneticButton>
+              </Button>
             </div>
           </motion.div>
         </div>

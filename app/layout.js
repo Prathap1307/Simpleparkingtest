@@ -62,6 +62,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <Head>
         <link rel="icon" href="/favicon.ico" />
+
       </Head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <GoogleAnalytics />
@@ -97,6 +98,19 @@ export default function RootLayout({ children }) {
               "name": "SimpleParking UK"
             }
           })}
+        </script>
+                        {/* Google Tag (gtag.js) */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=AW-17474395596"
+        />
+        <script id="google-ads" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-17474395596');
+          `}
         </script>
       </body>
     </html>

@@ -15,8 +15,6 @@ export async function POST(req) {
       process.env.STRIPE_WEBHOOK_SECRET
     );
 
-    console.log('Received event:', event.type);
-
     switch (event.type) {
       case 'payment_intent.succeeded':
         const paymentIntent = event.data.object;
@@ -29,7 +27,7 @@ export async function POST(req) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        console.log('Unhandled event');
     }
 
     return NextResponse.json({ received: true });

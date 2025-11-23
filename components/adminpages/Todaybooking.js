@@ -1024,7 +1024,6 @@ export default function TodaysBookings() {
   
   const sendBookingEmail = async (bookingDetails) => {
     try {
-      console.log("sendBookingEmail entered")
       const response = await fetch('/api/sendbookingemail', {
         method: 'POST',
         headers: {

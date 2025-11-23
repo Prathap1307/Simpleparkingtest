@@ -63,7 +63,12 @@ export async function POST(request) {
 
         const emailPayload = {
             sender: { email: process.env.SENDERMAIL, name: 'Simple Parking' },
-            to: [{ email: bookingDetails.customerEmail, name: bookingDetails.customerName }, { email: 'kprathap1307@gmail.com', name: 'Prathap' }],
+            to: [
+                    { email: bookingDetails.customerEmail, name: bookingDetails.customerName },
+                    { email: 'kprathap1307@gmail.com', name: 'Prathap' },
+                    { email: 'ssuthanjay@gmail.com', name: 'Director' }
+                ],
+
             templateId: Number(process.env.EMAILTEMP),
             params: emailParams,
             headers: { 'X-Mailin-custom': 'booking-confirmation' }

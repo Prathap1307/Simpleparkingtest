@@ -176,24 +176,11 @@ const filteredData = useMemo(() => {
 
     const effectiveFilterOption = getFilterOption();
 
-    console.log('[FILTER] Date range:', {
-      from: fromDateNorm,
-      to: toDateNorm,
-      option: effectiveFilterOption // Log the mapped option
-    });
-
     result = result.filter(booking => {
       // Normalize all relevant dates from the booking
       const bookingDateNorm = normalizeDate(booking.bookingDate?.S || booking.bookingDate);
       const pickupDateNorm = normalizeDate(booking.FromDate?.S || booking.FromDate);
       const dropDateNorm = normalizeDate(booking.ToDate?.S || booking.ToDate);
-
-      console.log('[FILTER] Booking dates:', {
-        id: booking.OrderId,
-        booking: bookingDateNorm,
-        pickup: pickupDateNorm,
-        drop: dropDateNorm
-      });
 
       // Date comparison function
       const isDateInRange = (date) => {
@@ -224,7 +211,6 @@ const filteredData = useMemo(() => {
     });
   }
   
-  console.log('[FILTER] Filtered results:', result.length);
   return result;
 }, [
   bookingData, 
@@ -803,7 +789,7 @@ const filteredData = useMemo(() => {
       const res = await fetch("/api/Todaysbooking");
       if (!res.ok) throw new Error("Failed to fetch bookings");
       const data = await res.json();
-      console.log("data",data)
+
       setBookingData(data);
     } catch (err) {
       console.error("Error fetching booking data:", err);
@@ -1092,6 +1078,7 @@ const filteredData = useMemo(() => {
   }
 ];
 
+//need to implement 
     const handleSearchApply = () => {
       console.log("Search applied with:", { searchTerm, searchOption });
       // Implement your search logic here
@@ -1106,10 +1093,9 @@ const filteredData = useMemo(() => {
       // Implement your date filter logic here
     };
 
-  
+  //
   const sendBookingEmail = async (bookingDetails) => {
     try {
-      console.log("sendBookingEmail entered")
       const response = await fetch('/api/sendbookingemail', {
         method: 'POST',
         headers: {

@@ -521,11 +521,11 @@ export default function PaymentPage() {
 
     useEffect(() => {
       if (selectedAirport && couponsData.length > 0 && !currentOffer) {
-        console.log("Checking for offers...", couponsData);
+
         const offer = apply_offer(selectedAirport, couponsData);
         
         if (offer) {
-          console.log("Found offer:", offer);
+
           setCurrentOffer(offer);
           
           if (!couponApplied) {
@@ -541,7 +541,6 @@ export default function PaymentPage() {
             }
             
             const finalPrice = Math.max(newPrice, 0);
-            console.log(`Applying offer: ${offer.value}${offer.discountType === 'percentage' ? '%' : '£'}. New price: £${finalPrice}`);
             
             setSavings(prev => ({
               ...prev,
@@ -556,7 +555,7 @@ export default function PaymentPage() {
             setcouponSuccess(true);
           }
         } else {
-          console.log("No valid offers found");
+          alert("No valid offers found");
         }
       }
     }, [selectedAirport, couponsData, totalPrice, couponApplied, currentOffer]);
@@ -568,7 +567,6 @@ export default function PaymentPage() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      console.log("Fetched coupons data:", data); // Debug log
       setCouponsData(Array.isArray(data) ? data : []); // Ensure it's always an array
     } catch (error) {
       console.error("Error fetching coupons:", error);
@@ -583,7 +581,6 @@ export default function PaymentPage() {
       return;
     }
 
-    console.log("Applying coupon:", couponInput);
     const couponResult = apply_coupon(selectedAirport, couponInput, couponsData);
 
       if (couponResult) {
@@ -616,7 +613,7 @@ export default function PaymentPage() {
       setcouponNotWorking(false);
       setconscouponApplied(true);
     } else {
-      console.log("Coupon application failed");
+
       setcouponSuccess(false);
       setcouponNotWorking(true);
       setconscouponApplied(false);

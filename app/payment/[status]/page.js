@@ -114,6 +114,7 @@ export default function PaymentStatusPage() {
 
   return (
     <div className="max-w-md mx-auto text-center py-12 px-4">
+    <gtag />
       <div className="mb-6">{currentConfig.icon}</div>
       <h1 className={`text-2xl font-bold ${currentConfig.colorClass} mb-4`}>
         {currentConfig.title}
