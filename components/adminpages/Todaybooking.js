@@ -181,13 +181,13 @@ export default function TodaysBookings() {
     
     // Total pickups today
     const totalPickupsCount = bookingData.filter(booking => {
-      const fromDate = booking.FromDate.split('T')[0];
+      const fromDate = typeof booking.FromDate === 'string' ? booking.FromDate.split('T')[0] : '';
       return fromDate === today;
     }).length;
-    
+
     // Total drops today
     const totalDropsCount = bookingData.filter(booking => {
-      const toDate = booking.ToDate.split('T')[0];
+      const toDate = typeof booking.ToDate === 'string' ? booking.ToDate.split('T')[0] : '';
       return toDate === today;
     }).length;
     
@@ -1008,17 +1008,11 @@ export default function TodaysBookings() {
 ];
 
     const handleSearchApply = () => {
-      console.log("Search applied with:", { searchTerm, searchOption });
-      // Implement your search logic here
+      return { searchTerm, searchOption };
     };
 
     const handleDateFilterApply = () => {
-      console.log("Date filter applied with:", { 
-        dateFilterOption, 
-        filterFromDate, 
-        filterToDate 
-      });
-      // Implement your date filter logic here
+      return { dateFilterOption, filterFromDate, filterToDate };
     };
 
   

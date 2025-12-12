@@ -32,7 +32,6 @@ export const formatTime = (timeString) => {
     
     return `${hours}:${minutes} ${ampm}`;
   } catch (error) {
-    console.error("Error formatting time:", error, timeString);
     return "N/A";
   }
 };
@@ -48,19 +47,12 @@ export function isDateBetween(dateToCheck, startDateStr, endDateStr) {
 }
 
 export function apply_offer(airport, couponsData) {
-    console.log("airport, couponsData",airport, couponsData)
   const now = new Date();
-  console.log('Current time:', formatDate(now), formatTime(now));
-  
+
   const validOffer = couponsData.find(item => {
     if (item.type !== 'offer') return false;
     if (item.Location !== airport) return false;
-    
-    console.log('Offer dates:', {
-      from: `${formatDate(item.fromDate)} ${formatTime(item.fromDate)}`,
-      to: `${formatDate(item.toDate)} ${formatTime(item.toDate)}`
-    });
-    
+
     return isDateBetween(now, item.fromDate, item.toDate);
   });
 
@@ -71,7 +63,6 @@ export function apply_offer(airport, couponsData) {
 }
 
 export function apply_coupon(airport, couponCode, couponsData) {
-    console.log(airport, couponCode, couponsData)
   const now = new Date();
   
   const validCoupon = couponsData.find(item => {
@@ -79,7 +70,6 @@ export function apply_coupon(airport, couponCode, couponsData) {
     if (item.Location !== airport) return false;
     if (item.couponCode?.toLowerCase() !== couponCode?.toLowerCase()) return false;
     const check = isDateBetween(now, item.fromDate, item.toDate);
-    console.log("check",check)
     return check
   });
 

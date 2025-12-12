@@ -9,8 +9,6 @@ export const processCustomerData = async (customerData) => {
     if (!response.ok) throw new Error('Failed to fetch customers');
     
     const allCustomers = await response.json();
-    console.log("allCustomers", allCustomers);
-    console.log("customerData.CustomerEmail", customerData.CustomerEmail);
 
     // Find customer by email (case-insensitive)
     const existingCustomer = allCustomers.find(customer => 

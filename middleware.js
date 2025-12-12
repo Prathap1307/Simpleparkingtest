@@ -1,11 +1,5 @@
 // middleware.js
 export function middleware(request) {
-  // Track redirect sources for analytics
-  const trackRedirect = (path) => {
-    console.log(`Redirect triggered: ${path} → Homepage`);
-    // Add your analytics tracking here (e.g., Google Analytics)
-  };
-
   // All redirect mappings (SEO pages → Homepage)
   const redirects = {
     // Core Service Pages
@@ -35,9 +29,8 @@ export function middleware(request) {
   };
 
   const path = request.nextUrl.pathname;
-  
+
   if (redirects[path]) {
-    trackRedirect(path);
     const destination = new URL(redirects[path], request.url);
     
     // Preserve query params if they exist

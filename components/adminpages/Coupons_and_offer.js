@@ -81,7 +81,7 @@ export default function CouponsAndOffers() {
 
   const handleDelete = (item) => {
     if (!item?.id) {
-      console.error("Missing ID");
+      alert("Missing coupon ID");
       return;
     }
 
@@ -99,10 +99,8 @@ export default function CouponsAndOffers() {
 
       if (!res.ok) throw new Error('Failed to delete.');
 
-      console.log(`Deleted coupon with ID: ${itemToDelete.id}`);
       await refreshTableData();
     } catch (error) {
-      console.error('Error deleting coupon:', error);
       alert('Failed to delete coupon.');
     } finally {
       setShowAlert(false);

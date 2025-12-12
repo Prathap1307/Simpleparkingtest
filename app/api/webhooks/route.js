@@ -27,12 +27,11 @@ export async function POST(req) {
         break;
 
       default:
-        console.log('Unhandled event');
+        break;
     }
 
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error('Webhook error:', err);
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 400 });
   }
 }
@@ -65,9 +64,7 @@ async function handleSuccessfulPayment(paymentIntent) {
       await processCustomerData(bookingData);
       await sendBookingEmail(bookingData);
     }
-  } catch (error) {
-    console.error('Failed to handle successful payment:', error);
-  }
+  } catch (error) {}
 }
 
 async function handleFailedPayment(paymentIntent) {
@@ -83,7 +80,5 @@ async function handleFailedPayment(paymentIntent) {
         status: 'payment_failed'
       })
     });
-  } catch (error) {
-    console.error('Failed to handle failed payment:', error);
-  }
+  } catch (error) {}
 }
